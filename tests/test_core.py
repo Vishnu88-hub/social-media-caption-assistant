@@ -74,6 +74,32 @@ def test_provider_fallback_and_missing_credentials(monkeypatch):
         })
 
 
+def test_provider_rotates_models_from_original_prompt(monkeypatch):
+    settings = Settings(
+        groq_api_key="groq",
+        groq_models=("unavailable-model", "working-model"),
+        gemini_api_key="",
+    )
+    prompts = []
+
+    def fake_groq(_settings, prompt, model=None):
+        prompts.append((model, prompt))
+        if model == "unavailable-model":
+            raise ProviderError("model not found")
+        return '{"captions":[{"text":"Fresh result","hashtags":[]}]}'
+
+    monkeypatch.setattr("llm._groq_call", fake_groq)
+    prompt_args = {
+        "platform": "Instagram", "tone": "casual", "language": "English", "length": "short",
+        "variants": 3, "idea": "original idea", "image_description": "", "emoji_enabled": True,
+        "call_to_action": "", "brand_voice": "", "score_enabled": False,
+    }
+    result = generate_captions(settings, prompt_args)
+    assert result.model == "working-model"
+    assert [model for model, _ in prompts] == ["unavailable-model", "working-model"]
+    assert prompts[0][1] == prompts[1][1]
+
+
 def test_provider_error_detail_masks_credentials():
     detail = _safe_provider_detail(RuntimeError("api_key=sk-abcdefghijklmnop"))
     assert "sk-abcdefghijklmnop" not in detail

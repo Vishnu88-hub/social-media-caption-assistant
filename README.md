@@ -44,10 +44,19 @@ Fill these fields in `.env` yourself:
 GEMINI_API_KEY=
 GROQ_API_KEY=
 GEMINI_MODEL=gemini-3.8-flash
-GROQ_MODEL=llama-3.1-8b-instant
+GROQ_MODEL=openai/gpt-oss-120b
+GEMINI_MODELS=gemini-3.8-flash,gemini-2.5-flash
+GROQ_MODELS=openai/gpt-oss-120b,openai/gpt-oss-20b
 RAG_PATH=rag_data
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 ```
+
+Caption generation tries every model in `GROQ_MODELS` first, then every model in
+`GEMINI_MODELS`. Each attempt receives the original prompt from scratch; failed
+responses are never forwarded to another model. The singular `GROQ_MODEL` and
+`GEMINI_MODEL` settings remain supported for backward compatibility. Model IDs
+are account- and time-dependent, so verify availability in the provider console
+before deployment.
 
 Never commit `.env`, secrets, uploaded images, or `captions.db`.
 

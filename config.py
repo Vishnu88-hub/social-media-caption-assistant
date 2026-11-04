@@ -33,12 +33,19 @@ def _secret(name: str, default: str = "") -> str:
     return str(value or "").strip()
 
 
+def _model_list(value: str, fallback: str) -> tuple[str, ...]:
+    models = tuple(item.strip() for item in value.split(",") if item.strip())
+    return models or (fallback,)
+
+
 @dataclass(frozen=True)
 class Settings:
     gemini_api_key: str = ""
     groq_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
-    groq_model: str = "llama-3.1-8b-instant"
+    gemini_model: str = "gemini-2.5-flash"
+    groq_model: str = "openai/gpt-oss-120b"
+    gemini_models: tuple[str, ...] = ("gemini-2.5-flash", "gemini-2.5-flash-lite")
+    groq_models: tuple[str, ...] = ("openai/gpt-oss-120b", "openai/gpt-oss-20b")
     database_path: str = "captions.db"
     max_image_bytes: int = 10 * 1024 * 1024
     max_idea_chars: int = 500
@@ -52,8 +59,8 @@ class Settings:
         values: dict[str, Any] = {
             "gemini_api_key": _secret("GEMINI_API_KEY"),
             "groq_api_key": _secret("GROQ_API_KEY"),
-            "gemini_model": _secret("GEMINI_MODEL", "gemini-3.8-flash"),
-            "groq_model": _secret("GROQ_MODEL", "llama-3.1-8b-instant"),
+            "gemini_model": _secret("GEMINI_MODEL", "gemini-2.5-flash"),
+            "groq_model": _secret("GROQ_MODEL", "openai/gpt-oss-120b"),
             "database_path": _secret("CAPTION_DB_PATH", "captions.db"),
             "max_image_bytes": int(_secret("MAX_IMAGE_BYTES", str(10 * 1024 * 1024))),
             "max_idea_chars": int(_secret("MAX_IDEA_CHARS", "500")),
@@ -62,6 +69,12 @@ class Settings:
             "rag_path": _secret("RAG_PATH", "rag_data"),
             "embedding_model": _secret("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
         }
+        values["gemini_models"] = _model_list(
+            _secret("GEMINI_MODELS", values["gemini_model"]), values["gemini_model"]
+        )
+        values["groq_models"] = _model_list(
+            _secret("GROQ_MODELS", values["groq_model"]), values["groq_model"]
+        )
         if overrides:
             values.update(overrides)
         return cls(**values)
@@ -80,8 +93,8 @@ class Settings:
 
     def safe_status(self) -> dict[str, str]:
         return {
-            "Groq": f"configured ({self.groq_model})" if self.groq_configured else "not configured",
-            "Gemini": f"configured ({self.gemini_model})" if self.gemini_configured else "not configured",
+            "Groq": f"configured ({', '.join(self.groq_models)})" if self.groq_configured else "not configured",
+            "Gemini": f"configured ({', '.join(self.gemini_models)})" if self.gemini_configured else "not configured",
         }
 
 
